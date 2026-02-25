@@ -9,7 +9,7 @@ function TaskItem({
   toggleTask
 }) {
   return (
-    <div style={{ marginBottom: "8px" }}>
+    <div className="task-item">
       {editingId === task.id ? (
         <>
           <input
@@ -21,6 +21,7 @@ function TaskItem({
       ) : (
         <>
           <span
+            className="task-text"
             style={{
               textDecoration: task.completed ? "line-through" : "none",
               cursor: "pointer",
@@ -31,6 +32,7 @@ function TaskItem({
             {task.text}
           </span>
 
+<div className="task-buttons"></div>
           <button onClick={() => handleEdit(task)}>Edit</button>
           <button onClick={() => deleteTask(task.id)}>Delete</button>
         </>

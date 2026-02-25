@@ -55,10 +55,11 @@ function Dashboard() {
 };
 
   return (
-    <div>
+    <div className="app-container">
       <h2>Task Dashboard</h2>
 
       <input
+      className="task-input"
         placeholder="Add a new task..."
         onKeyDown={(e) => {
           if (e.key === "Enter" && e.target.value.trim() !== "") {
