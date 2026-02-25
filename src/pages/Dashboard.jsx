@@ -43,6 +43,16 @@ function Dashboard() {
     setEditText("");
   };
 
+  const toggleTask = (id) => {
+  setTasks(
+    tasks.map(task =>
+      task.id === id
+        ? { ...task, completed: !task.completed }
+        : task
+    )
+  );
+};
+
   return (
     <div>
       <h2>Task Dashboard</h2>
@@ -69,7 +79,15 @@ function Dashboard() {
             </>
           ) : (
             <>
-              <span>{task.text}</span>
+              <span
+  style={{
+    textDecoration: task.completed ? "line-through" : "none",
+    cursor: "pointer"
+  }}
+  onClick={() => toggleTask(task.id)}
+>
+  {task.text}
+</span>
               <button onClick={() => handleEdit(task)}>Edit</button>
               <button onClick={() => deleteTask(task.id)}>Delete</button>
             </>
