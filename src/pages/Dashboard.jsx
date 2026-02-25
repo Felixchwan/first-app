@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import TaskItem from "../components/TaskItem";
 
 function Dashboard() {
   const [tasks, setTasks] = useState(() => {
@@ -68,32 +69,18 @@ function Dashboard() {
       />
 
       {tasks.map(task => (
-        <div key={task.id}>
-          {editingId === task.id ? (
-            <>
-              <input
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-              />
-              <button onClick={handleUpdate}>Save</button>
-            </>
-          ) : (
-            <>
-              <span
-  style={{
-    textDecoration: task.completed ? "line-through" : "none",
-    cursor: "pointer"
-  }}
-  onClick={() => toggleTask(task.id)}
->
-  {task.text}
-</span>
-              <button onClick={() => handleEdit(task)}>Edit</button>
-              <button onClick={() => deleteTask(task.id)}>Delete</button>
-            </>
-          )}
-        </div>
-      ))}
+  <TaskItem
+    key={task.id}
+    task={task}
+    editingId={editingId}
+    editText={editText}
+    setEditText={setEditText}
+    handleEdit={handleEdit}
+    handleUpdate={handleUpdate}
+    deleteTask={deleteTask}
+    toggleTask={toggleTask}
+  />
+))}
     </div>
   );
 }
