@@ -57,3 +57,46 @@
   height: 100%;
   background-color: green;
 }
+
+.app-container {
+  transition: all 0.3s ease;
+}
+
+.app-container.dark {
+  background-color: #121212;
+  color: #f5f5f5;
+}
+
+.app-container.dark input {
+  background-color: #1f1f1f;
+  color: white;
+  border: 1px solid #444;
+}
+
+.app-container.dark button {
+  background-color: #2a2a2a;
+  color: white;
+}
+
+.app-container.dark .progress-container {
+  background-color: #333;
+}
+
+.theme-toggle {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  margin-bottom: 12px;
+  transition: all 0.3s ease;
+}
+
+.app-container.dark .theme-toggle {
+  background-color: #333;
+  color: white;
+}
+
+.app-container:not(.dark) .theme-toggle {
+  background-color: #eaeaea;
+  color: #222;
+}

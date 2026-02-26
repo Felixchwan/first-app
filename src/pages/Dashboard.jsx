@@ -4,8 +4,16 @@ import Stats from "../components/Stats";
 import "../App.css";
 import "../index.css";
 
-
 function Dashboard() {
+
+  const [darkMode, setDarkMode] = useState(() => {
+  const savedTheme = localStorage.getItem("theme");
+  return savedTheme === "dark";
+});
+useEffect(() => {
+  localStorage.setItem("theme", darkMode ? "dark" : "light");
+}, [darkMode]);
+
   const [tasks, setTasks] = useState(() => {
     const savedTasks = localStorage.getItem("tasks");
     return savedTasks ? JSON.parse(savedTasks) : [];
@@ -77,8 +85,14 @@ const filteredTasks = tasks.filter(task => {
 });
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${darkMode ? "dark" : ""}`}>
       <h2>Task Dashboard</h2>
+    <button
+  onClick={() => setDarkMode(!darkMode)}
+  className="theme-toggle"
+>
+  {darkMode ? "🌙 Dark Mode" : "☀️ Light Mode"}
+</button>
 
       <input
       className="task-input"
