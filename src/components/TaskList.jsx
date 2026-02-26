@@ -15,4 +15,11 @@ function TaskList({ tasks, deleteTask, toggleTask }) {
   );
 }
 
+<div className="stats">
+  <p>Total: {totalTasks}</p>
+  <p>Completed: {completedTasks}</p>
+  <p>Pending: {pendingTasks}</p>
+  <p>Progress: {completionPercentage}%</p>
+</div>
+
 export default TaskList;
