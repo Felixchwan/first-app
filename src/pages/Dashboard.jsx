@@ -56,17 +56,24 @@ const completionPercentage =
     setEditText(task.text);
   };
 
-  const handleUpdate = () => {
-    setTasks(
-      tasks.map(task =>
-        task.id === editingId
-          ? { ...task, text: editText }
-          : task
-      )
-    );
-    setEditingId(null);
-    setEditText("");
-  };
+const handleCancelEdit = () => {
+  setEditingId(null);
+  setEditText("");
+};
+
+const handleUpdate = (id) => {
+  const nextText = editText.trim();
+  if (!nextText) return; // or show a message
+
+  setTasks(prev =>
+    prev.map(task =>
+      task.id === id ? { ...task, text: nextText } : task
+    )
+  );
+
+  setEditingId(null);
+  setEditText("");
+};
 
   const toggleTask = (id) => {
   setTasks(
@@ -133,6 +140,7 @@ const filteredTasks = tasks.filter(task => {
     setEditText={setEditText}
     handleEdit={handleEdit}
     handleUpdate={handleUpdate}
+    handleCancelEdit={handleCancelEdit}
     deleteTask={deleteTask}
     toggleTask={toggleTask}
   />
