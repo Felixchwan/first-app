@@ -1,3 +1,4 @@
+import { supabase } from "../lib/supabaseClient";
 import { useState, useEffect } from "react";
 import TaskItem from "../components/TaskItem";
 import Stats from "../components/Stats";
@@ -14,16 +15,8 @@ useEffect(() => {
   localStorage.setItem("theme", darkMode ? "dark" : "light");
 }, [darkMode]);
 
-  const [tasks, setTasks] = useState(() => {
-    const savedTasks = localStorage.getItem("tasks");
-    const parsed = savedTasks ? JSON.parse(savedTasks) : [];
-
-    // Migration: ensure dueDate exists on old tasks
-    return parsed.map((t) => ({
-      ...t,
-      dueDate: typeof t.dueDate === "string" ? t.dueDate : "",
-    }));
-  });
+const [tasks, setTasks] = useState([]);
+const [loadingTasks, setLoadingTasks] = useState(true);
 
 const totalTasks = tasks.length;
 
@@ -36,15 +29,40 @@ const completionPercentage =
     ? 0
     : Math.round((completedTasks / totalTasks) * 100);
 
-  useEffect(() => {
-    localStorage.setItem("tasks", JSON.stringify(tasks));
-  }, [tasks]);
-
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
   const [clicks, setClicks] = useState(0);
   const [filter, setFilter] = useState ("all");
+
+useEffect(() => {
+  const fetchTasks = async () => {
+    const { data, error } = await supabase
+      .from("tasks")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+      console.log("Fetched tasks:", data);
+
+    if (error) {
+  console.error("Error fetching tasks:", error.message);
+  setLoadingTasks(false);
+  return;
+}
+
+const formatted = (data || []).map(t => ({
+  id: t.id,
+  text: t.text,
+  completed: t.completed,
+  dueDate: t.due_date || "",
+}));
+
+setTasks(formatted);
+setLoadingTasks(false);
+  };
+
+  fetchTasks();
+}, []);
 
     const todayStr = () => {
     const d = new Date();
@@ -72,19 +90,61 @@ const completionPercentage =
   const [newTaskText, setNewTaskText] = useState("");
   const [newDueDate, setNewDueDate] = useState("");
 
-  const addTask = (taskText, dueDate = "") => {
-    const newTask = {
-      id: Date.now(),
-      text: taskText,
-      completed: false,
-      dueDate,
-    };
-    setTasks([...tasks, newTask]);
-  };
+const addTask = async (taskText, dueDate = "") => {
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError) {
+    console.error("Auth getUser error:", authError.message);
+    return;
+  }
 
-  const deleteTask = (id) => {
-    setTasks(tasks.filter(task => task.id !== id));
-  };
+  const userId = authData?.user?.id;
+  if (!userId) {
+    console.error("No user session found.");
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("tasks")
+    .insert([
+      {
+        user_id: userId,
+        text: taskText,
+        completed: false,
+        due_date: dueDate || null,
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Insert error:", error.message);
+    return;
+  }
+
+  setTasks((prev) => [
+    {
+      id: data.id,
+      text: data.text,
+      completed: data.completed,
+      dueDate: data.due_date || "",
+    },
+    ...prev,
+  ]);
+};
+
+const deleteTask = async (id) => {
+  const { error } = await supabase
+    .from("tasks")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error("Delete error:", error.message);
+    return;
+  }
+
+  setTasks(prev => prev.filter(task => task.id !== id));
+};
 
   const handleEdit = (task) => {
     setEditingId(task.id);
@@ -98,15 +158,26 @@ const handleCancelEdit = () => {
   setEditDueDate("");
 };
 
-const handleUpdate = (id) => {
+const handleUpdate = async (id) => {
   const nextText = editText.trim();
   if (!nextText) return;
 
-  setTasks(prev =>
-    prev.map(task =>
-      task.id === id
-        ? { ...task, text: nextText, dueDate: editDueDate }
-        : task
+  const { error } = await supabase
+    .from("tasks")
+    .update({
+      text: nextText,
+      due_date: editDueDate || null,
+    })
+    .eq("id", id);
+
+  if (error) {
+    console.error("Update error:", error.message);
+    return;
+  }
+
+  setTasks((prev) =>
+    prev.map((task) =>
+      task.id === id ? { ...task, text: nextText, dueDate: editDueDate } : task
     )
   );
 
@@ -115,12 +186,23 @@ const handleUpdate = (id) => {
   setEditDueDate("");
 };
 
-  const toggleTask = (id) => {
-  setTasks(
-    tasks.map(task =>
-      task.id === id
-        ? { ...task, completed: !task.completed }
-        : task
+const toggleTask = async (id) => {
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+
+  const { error } = await supabase
+    .from("tasks")
+    .update({ completed: !task.completed })
+    .eq("id", id);
+
+  if (error) {
+    console.error("Toggle error:", error.message);
+    return;
+  }
+
+  setTasks(prev =>
+    prev.map(t =>
+      t.id === id ? { ...t, completed: !t.completed } : t
     )
   );
 };
@@ -145,9 +227,17 @@ const sortedTasks = [...filteredTasks].sort((a, b) => {
     return a.dueDate.localeCompare(b.dueDate);
   }
 
-  // Newest first (since id is Date.now())
-  return b.id - a.id;
+  // fallback (stable)
+return 0;
 });
+
+if (loadingTasks) {
+  return (
+    <div className={`app-container ${darkMode ? "dark" : ""}`}>
+      <p>Loading tasks...</p>
+    </div>
+  );
+}
 
   return (
     <div className={`app-container ${darkMode ? "dark" : ""}`}>
