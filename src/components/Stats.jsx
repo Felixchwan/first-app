@@ -1,4 +1,12 @@
-export default function Stats({ total, completed, pending, percentage }) {
+export default function Stats({
+  total,
+  completed,
+  pending,
+  percentage,
+  overdue,
+  dueToday,
+  withDueDate,
+}) {
   if (total === 0) {
     return (
       <div className="stats">
@@ -12,13 +20,14 @@ export default function Stats({ total, completed, pending, percentage }) {
       <p>Total: {total}</p>
       <p>Completed: {completed}</p>
       <p>Pending: {pending}</p>
+      <p>Overdue: {overdue}</p>
+      <p>Due today: {dueToday}</p>
+      <p>With due date: {withDueDate}</p>
+
       <p>Completion Rate: {percentage}%</p>
 
       <div className="progress-container">
-        <div
-          className="progress-fill"
-          style={{ width: percentage + '%' }}
-        ></div>
+        <div className="progress-fill" style={{ width: percentage + "%" }} />
       </div>
     </div>
   );

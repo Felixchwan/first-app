@@ -66,6 +66,9 @@ const completionPercentage =
     return task.dueDate === todayStr();
   };
 
+  const overdueTasks = tasks.filter(t => isOverdue(t)).length;
+  const dueTodayTasks = tasks.filter(t => isDueToday(t)).length;
+  const withDueDateTasks = tasks.filter(t => !!t.dueDate).length;
   const [newTaskText, setNewTaskText] = useState("");
   const [newDueDate, setNewDueDate] = useState("");
 
@@ -128,6 +131,24 @@ const filteredTasks = tasks.filter(task => {
   return true;
 });
 
+const sortedTasks = [...filteredTasks].sort((a, b) => {
+  // Incomplete first
+  if (a.completed !== b.completed) return a.completed ? 1 : -1;
+
+  // Tasks with due dates first
+  const aHasDue = !!a.dueDate;
+  const bHasDue = !!b.dueDate;
+  if (aHasDue !== bHasDue) return aHasDue ? -1 : 1;
+
+  // Earlier due date first
+  if (aHasDue && bHasDue && a.dueDate !== b.dueDate) {
+    return a.dueDate.localeCompare(b.dueDate);
+  }
+
+  // Newest first (since id is Date.now())
+  return b.id - a.id;
+});
+
   return (
     <div className={`app-container ${darkMode ? "dark" : ""}`}>
       <h2>Task Dashboard</h2>
@@ -174,11 +195,14 @@ const filteredTasks = tasks.filter(task => {
       </div>
 
 <div className="stats">
-  <Stats
+<Stats
   total={totalTasks}
   completed={completedTasks}
   pending={pendingTasks}
   percentage={completionPercentage}
+  overdue={overdueTasks}
+  dueToday={dueTodayTasks}
+  withDueDate={withDueDateTasks}
 />
 </div>
 
@@ -191,7 +215,7 @@ const filteredTasks = tasks.filter(task => {
   <button onClick={() => setFilter("active")}>Active</button>
   <button onClick={() => setFilter("completed")}>Completed</button>
 </div>
-{filteredTasks.map(task => (
+{sortedTasks.map(task => (
   <TaskItem
     key={task.id}
     task={task}
