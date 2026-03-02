@@ -100,3 +100,47 @@
   background-color: #eaeaea;
   color: #222;
 }
+
+.add-task-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.due-input {
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.add-button {
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+.task-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 0.9rem;
+  opacity: 0.95;
+}
+
+.badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.task-overdue {
+  outline: 2px solid currentColor;
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.task-due-none {
+  opacity: 0.7;
+}

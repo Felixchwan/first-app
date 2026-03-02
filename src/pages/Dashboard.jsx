@@ -16,9 +16,16 @@ useEffect(() => {
 
   const [tasks, setTasks] = useState(() => {
     const savedTasks = localStorage.getItem("tasks");
-    return savedTasks ? JSON.parse(savedTasks) : [];
+    const parsed = savedTasks ? JSON.parse(savedTasks) : [];
+
+    // Migration: ensure dueDate exists on old tasks
+    return parsed.map((t) => ({
+      ...t,
+      dueDate: typeof t.dueDate === "string" ? t.dueDate : "",
+    }));
   });
-  const totalTasks = tasks.length;
+
+const totalTasks = tasks.length;
 
 const completedTasks = tasks.filter(task => task.completed).length;
 
@@ -35,14 +42,39 @@ const completionPercentage =
 
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
   const [clicks, setClicks] = useState(0);
   const [filter, setFilter] = useState ("all");
 
-  const addTask = (taskText) => {
+    const todayStr = () => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const isOverdue = (task) => {
+    if (task.completed) return false;
+    if (!task.dueDate) return false;
+    return task.dueDate < todayStr();
+  };
+
+  const isDueToday = (task) => {
+    if (task.completed) return false;
+    if (!task.dueDate) return false;
+    return task.dueDate === todayStr();
+  };
+
+  const [newTaskText, setNewTaskText] = useState("");
+  const [newDueDate, setNewDueDate] = useState("");
+
+  const addTask = (taskText, dueDate = "") => {
     const newTask = {
       id: Date.now(),
       text: taskText,
       completed: false,
+      dueDate,
     };
     setTasks([...tasks, newTask]);
   };
@@ -54,25 +86,30 @@ const completionPercentage =
   const handleEdit = (task) => {
     setEditingId(task.id);
     setEditText(task.text);
+    setEditDueDate(task.dueDate || "");
   };
 
 const handleCancelEdit = () => {
   setEditingId(null);
   setEditText("");
+  setEditDueDate("");
 };
 
 const handleUpdate = (id) => {
   const nextText = editText.trim();
-  if (!nextText) return; // or show a message
+  if (!nextText) return;
 
   setTasks(prev =>
     prev.map(task =>
-      task.id === id ? { ...task, text: nextText } : task
+      task.id === id
+        ? { ...task, text: nextText, dueDate: editDueDate }
+        : task
     )
   );
 
   setEditingId(null);
   setEditText("");
+  setEditDueDate("");
 };
 
   const toggleTask = (id) => {
@@ -101,17 +138,40 @@ const filteredTasks = tasks.filter(task => {
   {darkMode ? "🌙 Dark Mode" : "☀️ Light Mode"}
 </button>
 
-      <input
-      className="task-input"
-        placeholder="Add a new task..."
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && e.target.value.trim() !== "") {
-            addTask(e.target.value);
-            e.target.value = "";
-          }
-        }}
-      />
-<p>Clicks: {clicks}</p>
+      <div className="add-task-row">
+        <input
+          className="task-input"
+          placeholder="Add a new task..."
+          value={newTaskText}
+          onChange={(e) => setNewTaskText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && newTaskText.trim() !== "") {
+              addTask(newTaskText.trim(), newDueDate);
+              setNewTaskText("");
+              setNewDueDate("");
+            }
+          }}
+        />
+
+        <input
+          className="due-input"
+          type="date"
+          value={newDueDate}
+          onChange={(e) => setNewDueDate(e.target.value)}
+        />
+
+        <button
+          className="add-button"
+          onClick={() => {
+            if (!newTaskText.trim()) return;
+            addTask(newTaskText.trim(), newDueDate);
+            setNewTaskText("");
+            setNewDueDate("");
+          }}
+        >
+          Add
+        </button>
+      </div>
 
 <div className="stats">
   <Stats
@@ -131,13 +191,17 @@ const filteredTasks = tasks.filter(task => {
   <button onClick={() => setFilter("active")}>Active</button>
   <button onClick={() => setFilter("completed")}>Completed</button>
 </div>
-      {filteredTasks.map(task => (
+{filteredTasks.map(task => (
   <TaskItem
     key={task.id}
     task={task}
     editingId={editingId}
     editText={editText}
     setEditText={setEditText}
+    editDueDate={editDueDate}
+    setEditDueDate={setEditDueDate}
+    isOverdue={isOverdue}
+    isDueToday={isDueToday}
     handleEdit={handleEdit}
     handleUpdate={handleUpdate}
     handleCancelEdit={handleCancelEdit}
