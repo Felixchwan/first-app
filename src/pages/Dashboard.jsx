@@ -15,6 +15,16 @@ useEffect(() => {
   localStorage.setItem("theme", darkMode ? "dark" : "light");
 }, [darkMode]);
 
+const [uiError, setUiError] = useState("");
+const showError = (message) => {
+  setUiError(message);
+  setTimeout(() => setUiError(""), 4000);
+};
+
+const [adding, setAdding] = useState(false);
+const [updatingId, setUpdatingId] = useState(null); // for toggle + save
+const [deletingId, setDeletingId] = useState(null);
+
 const [tasks, setTasks] = useState([]);
 const [loadingTasks, setLoadingTasks] = useState(true);
 
@@ -47,6 +57,8 @@ useEffect(() => {
     if (error) {
   console.error("Error fetching tasks:", error.message);
   setLoadingTasks(false);
+  setAdding(false);
+  showError(error.message);
   return;
 }
 
@@ -91,45 +103,49 @@ setLoadingTasks(false);
   const [newDueDate, setNewDueDate] = useState("");
 
 const addTask = async (taskText, dueDate = "") => {
-  const { data: authData, error: authError } = await supabase.auth.getUser();
-  if (authError) {
-    console.error("Auth getUser error:", authError.message);
-    return;
-  }
+  if (adding) return;
+  setAdding(true);
 
-  const userId = authData?.user?.id;
-  if (!userId) {
-    console.error("No user session found.");
-    return;
-  }
+  try {
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError) throw authError;
 
-  const { data, error } = await supabase
-    .from("tasks")
-    .insert([
+    const userId = authData?.user?.id;
+    if (!userId) throw new Error("No active user session found.");
+
+    const { data, error } = await supabase
+      .from("tasks")
+      .insert([
+        {
+          user_id: userId,
+          text: taskText,
+          completed: false,
+          due_date: dueDate || null,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    setTasks((prev) => [
       {
-        user_id: userId,
-        text: taskText,
-        completed: false,
-        due_date: dueDate || null,
+        id: data.id,
+        text: data.text,
+        completed: data.completed,
+        dueDate: data.due_date || "",
       },
-    ])
-    .select()
-    .single();
+      ...prev,
+    ]);
 
-  if (error) {
-    console.error("Insert error:", error.message);
-    return;
+    // clear inputs only after success
+    setNewTaskText("");
+    setNewDueDate("");
+  } catch (e) {
+    showError(e?.message || "Failed to add task.");
+  } finally {
+    setAdding(false);
   }
-
-  setTasks((prev) => [
-    {
-      id: data.id,
-      text: data.text,
-      completed: data.completed,
-      dueDate: data.due_date || "",
-    },
-    ...prev,
-  ]);
 };
 
 const deleteTask = async (id) => {
@@ -140,6 +156,7 @@ const deleteTask = async (id) => {
 
   if (error) {
     console.error("Delete error:", error.message);
+    showError(error.message);
     return;
   }
 
@@ -172,6 +189,7 @@ const handleUpdate = async (id) => {
 
   if (error) {
     console.error("Update error:", error.message);
+    showError(error.message);
     return;
   }
 
@@ -197,6 +215,7 @@ const toggleTask = async (id) => {
 
   if (error) {
     console.error("Toggle error:", error.message);
+    showError(error.message);
     return;
   }
 
@@ -241,6 +260,19 @@ if (loadingTasks) {
 
   return (
     <div className={`app-container ${darkMode ? "dark" : ""}`}>
+      {uiError && (
+  <div
+    style={{
+      background: "#ff4d4f",
+      color: "white",
+      padding: "8px",
+      borderRadius: "6px",
+      marginBottom: "10px",
+    }}
+  >
+    {uiError}
+  </div>
+)}
       <h2>Task Dashboard</h2>
     <button
   onClick={() => setDarkMode(!darkMode)}
@@ -255,12 +287,10 @@ if (loadingTasks) {
           placeholder="Add a new task..."
           value={newTaskText}
           onChange={(e) => setNewTaskText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && newTaskText.trim() !== "") {
-              addTask(newTaskText.trim(), newDueDate);
-              setNewTaskText("");
-              setNewDueDate("");
-            }
+          onKeyDown={async (e) => {
+          if (e.key === "Enter" && newTaskText.trim() !== "" && !adding) {
+          await addTask(newTaskText.trim(), newDueDate);
+          }
           }}
         />
 
@@ -271,17 +301,16 @@ if (loadingTasks) {
           onChange={(e) => setNewDueDate(e.target.value)}
         />
 
-        <button
-          className="add-button"
-          onClick={() => {
-            if (!newTaskText.trim()) return;
-            addTask(newTaskText.trim(), newDueDate);
-            setNewTaskText("");
-            setNewDueDate("");
-          }}
-        >
-          Add
-        </button>
+<button
+  className="add-button"
+  disabled={adding}
+  onClick={async () => {
+    if (!newTaskText.trim() || adding) return;
+    await addTask(newTaskText.trim(), newDueDate);
+  }}
+>
+  {adding ? "Adding..." : "Add"}
+</button>
       </div>
 
 <div className="stats">
