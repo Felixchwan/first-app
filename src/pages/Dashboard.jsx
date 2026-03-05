@@ -1,9 +1,16 @@
-import { supabase } from "../lib/supabaseClient";
 import { useState, useEffect } from "react";
 import TaskItem from "../components/TaskItem";
 import Stats from "../components/Stats";
 import "../App.css";
 import "../index.css";
+import {
+  fetchTasks,
+  createTask,
+  updateTask,
+  toggleTaskStatus,
+  deleteTaskById
+} from "../services/tasksService";
+import { supabase } from "../lib/supabaseClient";
 
 function Dashboard() {
 
@@ -39,56 +46,63 @@ const completionPercentage =
     ? 0
     : Math.round((completedTasks / totalTasks) * 100);
 
-  const [editingId, setEditingId] = useState(null);
-  const [editText, setEditText] = useState("");
-  const [editDueDate, setEditDueDate] = useState("");
-  const [clicks, setClicks] = useState(0);
-  const [filter, setFilter] = useState ("all");
+const [editingId, setEditingId] = useState(null);
+const [editText, setEditText] = useState("");
+const [editDueDate, setEditDueDate] = useState("");
+const [clicks, setClicks] = useState(0);
+const [filter, setFilter] = useState ("all");
 
 useEffect(() => {
-  const fetchTasks = async () => {
-    const { data, error } = await supabase
-      .from("tasks")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-      console.log("Fetched tasks:", data);
-
-    if (error) {
-  console.error("Error fetching tasks:", error.message);
-  setLoadingTasks(false);
-  setAdding(false);
-  showError(error.message);
-  return;
-}
-
-const formatted = (data || []).map(t => ({
-  id: t.id,
-  text: t.text,
-  completed: t.completed,
-  dueDate: t.due_date || "",
-}));
-
-setTasks(formatted);
-setLoadingTasks(false);
+  const load = async () => {
+    try {
+      const results = await fetchTasks();
+      setTasks(results);
+    } catch (e) {
+      showError(e?.message || "Failed to fetch tasks.");
+    } finally {
+      setLoadingTasks(false);
+    }
   };
 
-  fetchTasks();
+  load();
 }, []);
 
-    const todayStr = () => {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    return `${yyyy}-${mm}-${dd}`;
-  };
+useEffect(() => {
+  const channel = supabase
+    .channel("tasks-realtime")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "tasks" },
+      (payload) => {
+        console.log("✅ Realtime event:", payload);
+        // simplest reliable approach: refetch
+        fetchTasks()
+          .then(setTasks)
+          .catch((e) => showError(e?.message || "Realtime sync failed."));
+      }
+    )
+    .subscribe((status) => {
+      console.log("📡 Realtime status:", status);
+    });
 
-  const isOverdue = (task) => {
-    if (task.completed) return false;
-    if (!task.dueDate) return false;
-    return task.dueDate < todayStr();
+  return () => {
+    supabase.removeChannel(channel);
   };
+}, []);
+
+const todayStr = () => {
+const d = new Date();
+const yyyy = d.getFullYear();
+const mm = String(d.getMonth() + 1).padStart(2, "0");
+const dd = String(d.getDate()).padStart(2, "0");
+return `${yyyy}-${mm}-${dd}`;
+};
+
+const isOverdue = (task) => {
+  if (task.completed) return false;
+  if (!task.dueDate) return false;
+  return task.dueDate < todayStr();
+};
 
   const isDueToday = (task) => {
     if (task.completed) return false;
@@ -107,38 +121,9 @@ const addTask = async (taskText, dueDate = "") => {
   setAdding(true);
 
   try {
-    const { data: authData, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
+    const newTask = await createTask(taskText, dueDate);
+    setTasks((prev) => [newTask, ...prev]);
 
-    const userId = authData?.user?.id;
-    if (!userId) throw new Error("No active user session found.");
-
-    const { data, error } = await supabase
-      .from("tasks")
-      .insert([
-        {
-          user_id: userId,
-          text: taskText,
-          completed: false,
-          due_date: dueDate || null,
-        },
-      ])
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    setTasks((prev) => [
-      {
-        id: data.id,
-        text: data.text,
-        completed: data.completed,
-        dueDate: data.due_date || "",
-      },
-      ...prev,
-    ]);
-
-    // clear inputs only after success
     setNewTaskText("");
     setNewDueDate("");
   } catch (e) {
@@ -149,18 +134,17 @@ const addTask = async (taskText, dueDate = "") => {
 };
 
 const deleteTask = async (id) => {
-  const { error } = await supabase
-    .from("tasks")
-    .delete()
-    .eq("id", id);
+  if (deletingId) return;
+  setDeletingId(id);
 
-  if (error) {
-    console.error("Delete error:", error.message);
-    showError(error.message);
-    return;
+  try {
+    await deleteTaskById(id);
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+  } catch (e) {
+    showError(e?.message || "Failed to delete task.");
+  } finally {
+    setDeletingId(null);
   }
-
-  setTasks(prev => prev.filter(task => task.id !== id));
 };
 
   const handleEdit = (task) => {
@@ -176,54 +160,53 @@ const handleCancelEdit = () => {
 };
 
 const handleUpdate = async (id) => {
+  if (updatingId) return;
+
   const nextText = editText.trim();
   if (!nextText) return;
 
-  const { error } = await supabase
-    .from("tasks")
-    .update({
-      text: nextText,
-      due_date: editDueDate || null,
-    })
-    .eq("id", id);
+  setUpdatingId(id);
 
-  if (error) {
-    console.error("Update error:", error.message);
-    showError(error.message);
-    return;
+  try {
+    await updateTask(id, nextText, editDueDate);
+
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === id ? { ...t, text: nextText, dueDate: editDueDate } : t
+      )
+    );
+
+    setEditingId(null);
+    setEditText("");
+    setEditDueDate("");
+  } catch (e) {
+    showError(e?.message || "Failed to save changes.");
+  } finally {
+    setUpdatingId(null);
   }
-
-  setTasks((prev) =>
-    prev.map((task) =>
-      task.id === id ? { ...task, text: nextText, dueDate: editDueDate } : task
-    )
-  );
-
-  setEditingId(null);
-  setEditText("");
-  setEditDueDate("");
 };
 
 const toggleTask = async (id) => {
-  const task = tasks.find(t => t.id === id);
+  if (updatingId) return;
+
+  const task = tasks.find((t) => t.id === id);
   if (!task) return;
 
-  const { error } = await supabase
-    .from("tasks")
-    .update({ completed: !task.completed })
-    .eq("id", id);
+  setUpdatingId(id);
 
-  if (error) {
-    console.error("Toggle error:", error.message);
-    showError(error.message);
-    return;
+  try {
+    await toggleTaskStatus(id, task.completed);
+
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === id ? { ...t, completed: !t.completed } : t
+      )
+    );
+  } catch (e) {
+    showError(e?.message || "Failed to update task.");
+  } finally {
+    setUpdatingId(null);
   }
-
-  setTasks(prev =>
-    prev.map(t =>
-      t.id === id ? { ...t, completed: !t.completed } : t
-    )
-  );
 };
 
 const filteredTasks = tasks.filter(task => {
