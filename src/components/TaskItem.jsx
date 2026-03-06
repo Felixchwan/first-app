@@ -7,6 +7,8 @@ function TaskItem({
   setEditDueDate,
   isOverdue,
   isDueToday,
+  updatingId,
+  deletingId,
   handleEdit,
   handleUpdate,
   handleCancelEdit,
@@ -17,6 +19,9 @@ function TaskItem({
 
   const overdue = isOverdue(task);
   const dueToday = isDueToday(task);
+
+  const isUpdatingThisTask = updatingId === task.id;
+  const isDeletingThisTask = deletingId === task.id;
 
   return (
     <div className={`task-item ${overdue ? "task-overdue" : ""}`}>
@@ -34,8 +39,15 @@ function TaskItem({
           />
 
           <div className="task-buttons">
-            <button onClick={() => handleUpdate(task.id)}>Save</button>
-            <button onClick={handleCancelEdit}>Cancel</button>
+            <button
+              onClick={() => handleUpdate(task.id)}
+              disabled={isUpdatingThisTask}
+            >
+              {isUpdatingThisTask ? "Saving..." : "Save"}
+            </button>
+            <button onClick={handleCancelEdit} disabled={isUpdatingThisTask}>
+              Cancel
+            </button>
           </div>
         </>
       ) : (
@@ -44,10 +56,13 @@ function TaskItem({
             className="task-text"
             style={{
               textDecoration: task.completed ? "line-through" : "none",
-              cursor: "pointer",
+              cursor: isUpdatingThisTask ? "not-allowed" : "pointer",
               marginRight: "10px",
+              opacity: isUpdatingThisTask ? 0.6 : 1,
             }}
-            onClick={() => toggleTask(task.id)}
+            onClick={() => {
+              if (!isUpdatingThisTask) toggleTask(task.id);
+            }}
           >
             {task.text}
           </span>
@@ -67,8 +82,18 @@ function TaskItem({
           </div>
 
           <div className="task-buttons">
-            <button onClick={() => handleEdit(task)}>Edit</button>
-            <button onClick={() => deleteTask(task.id)}>Delete</button>
+            <button
+              onClick={() => handleEdit(task)}
+              disabled={isDeletingThisTask || isUpdatingThisTask}
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => deleteTask(task.id)}
+              disabled={isDeletingThisTask}
+            >
+              {isDeletingThisTask ? "Deleting..." : "Delete"}
+            </button>
           </div>
         </>
       )}
