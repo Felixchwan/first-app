@@ -136,7 +136,7 @@ function Dashboard() {
         </div>
       )}
 
-      <h2>Task Dashboard</h2>
+      <h2>TaskFlow Realtime</h2>
 
       <button
         onClick={() => setDarkMode(!darkMode)}
