@@ -63,4 +63,12 @@ _Add screenshots here later._
 2. Install dependencies
 
 ```bash
+<<<<<<< HEAD
 npm install
+=======
+npm install
+npm run dev
+
+## Live Demo
+https://first-app-bay-seven.vercel.app
+>>>>>>> e722f74deff112583c8beceece9503875beb1534
