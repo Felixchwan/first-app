@@ -52,49 +52,28 @@ function TaskItem({
         </>
       ) : (
         <>
-          <span
-            className="task-text"
-            style={{
-              textDecoration: task.completed ? "line-through" : "none",
-              cursor: isUpdatingThisTask ? "not-allowed" : "pointer",
-              marginRight: "10px",
-              opacity: isUpdatingThisTask ? 0.6 : 1,
-            }}
-            onClick={() => {
-              if (!isUpdatingThisTask) toggleTask(task.id);
-            }}
-          >
-            {task.text}
-          </span>
+<div className="task-left">
+  <span className="task-text">{task.text}</span>
 
-          <div className="task-meta">
-            {task.dueDate ? (
-              <>
-                <span className="task-due">Due: {task.dueDate}</span>
-                {overdue && <span className="badge badge-overdue">Overdue</span>}
-                {!overdue && dueToday && (
-                  <span className="badge badge-today">Due today</span>
-                )}
-              </>
-            ) : (
-              <span className="task-due task-due-none">No due date</span>
-            )}
-          </div>
+  <div className="task-meta">
+    {task.dueDate ? (
+      <>
+        <span className="task-due">Due: {task.dueDate}</span>
+        {overdue && <span className="badge badge-overdue">Overdue</span>}
+        {!overdue && dueToday && (
+          <span className="badge badge-today">Due today</span>
+        )}
+      </>
+    ) : (
+      <span className="task-due task-due-none">No due date</span>
+    )}
+  </div>
+</div>
 
-          <div className="task-buttons">
-            <button
-              onClick={() => handleEdit(task)}
-              disabled={isDeletingThisTask || isUpdatingThisTask}
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => deleteTask(task.id)}
-              disabled={isDeletingThisTask}
-            >
-              {isDeletingThisTask ? "Deleting..." : "Delete"}
-            </button>
-          </div>
+<div className="task-buttons">
+  <button onClick={() => handleEdit(task)}>Edit</button>
+  <button onClick={() => deleteTask(task.id)}>Delete</button>
+</div>
         </>
       )}
     </div>

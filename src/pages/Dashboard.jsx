@@ -4,6 +4,7 @@ import Stats from "../components/Stats";
 import "../App.css";
 import "../index.css";
 import { useTasks } from "../hooks/useTasks";
+import { supabase } from "../lib/supabaseClient";
 
 function Dashboard() {
   const [darkMode, setDarkMode] = useState(() => {
@@ -11,9 +12,11 @@ function Dashboard() {
     return savedTheme === "dark";
   });
 
-  useEffect(() => {
-    localStorage.setItem("theme", darkMode ? "dark" : "light");
-  }, [darkMode]);
+useEffect(() => {
+  const theme = darkMode ? "dark" : "light";
+  document.body.className = theme;
+  localStorage.setItem("theme", theme);
+}, [darkMode]);
 
   const {
     tasks,
@@ -122,6 +125,11 @@ function Dashboard() {
 
   return (
     <div className={`app-container ${darkMode ? "dark" : ""}`}>
+      <div className="header-row">
+  <button className="secondary-button signout-btn" onClick={() => supabase.auth.signOut()}>
+    Sign out
+  </button>
+</div>
       {uiError && (
         <div
           style={{
@@ -142,7 +150,7 @@ function Dashboard() {
         onClick={() => setDarkMode(!darkMode)}
         className="theme-toggle"
       >
-        {darkMode ? "🌙 Dark Mode" : "☀️ Light Mode"}
+        {darkMode ? "☀️ Light Mode" : "🌙 Dark Mode"}
       </button>
 
       <div className="add-task-row">
@@ -198,8 +206,6 @@ function Dashboard() {
           withDueDate={withDueDateTasks}
         />
       </div>
-
-      <button onClick={() => setClicks(clicks + 1)}>Test State</button>
 
       <div style={{ marginBottom: "15px" }}>
         <button onClick={() => setFilter("all")}>All</button>

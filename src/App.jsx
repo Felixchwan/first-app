@@ -50,9 +50,6 @@ function App() {
       <div className="app-container">
         <h3>App Error</h3>
         <p>{fatalError}</p>
-        <p>
-          Check your <code>.env.local</code> values and restart <code>npm run dev</code>.
-        </p>
       </div>
     );
   }
@@ -65,14 +62,7 @@ function App() {
     );
   }
 
-  return (
-    <div className="app-container">
-      <div style={{ textAlign: "right", padding: "10px" }}>
-        <button onClick={() => supabase.auth.signOut()}>Sign out</button>
-      </div>
-      <Dashboard />
-    </div>
-  );
+  return <Dashboard />;
 }
 
 export default App;
